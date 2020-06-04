@@ -1,0 +1,5 @@
+myYungParser.output
+myYungParser.tab.c
+myYungParser.tab.h
+lex.yy.c
+mycompiler
