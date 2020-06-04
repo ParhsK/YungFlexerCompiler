@@ -11,7 +11,7 @@ int line_num = 1;
 
 %}
 
-ID        [a-zA-Z_][0-9a-zA-Z_]*
+ID         [a-zA-Z_][0-9a-zA-Z_]*
 DIGIT      [0-9]
 DIGIT_POS  [1-9]
 INTEGER    {DIGIT_POS}{DIGIT}*|{DIGIT}
