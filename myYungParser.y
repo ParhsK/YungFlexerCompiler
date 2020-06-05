@@ -41,9 +41,11 @@
 %token <str> EQUAL_OP
 %token <str> NOTEQUAL_OP
 %token <str> LESSEQUAL_OP
-%token <str> LESS_OP
 %token <str> LCB
 %token <str> RCB
+%token <str> LOWER_THAN_ELSE
+%nonassoc LOWER_THAN_ELSE
+%nonassoc KEYWORD_ELSE
 
 %type <str> input
 %start input
@@ -70,7 +72,7 @@
 
 %left OR_OP
 %left AND_OP
-%left EQUAL_OP NOTEQUAL_OP LESS_OP LESSEQUAL_OP
+%left EQUAL_OP NOTEQUAL_OP '<' LESSEQUAL_OP
 %left '-' '+'
 %left '*' '/' '%'
 %right POWER_OP
@@ -148,7 +150,7 @@ input: body {
     |expr '-' expr               {$$ = template("%s - %s", $1, $3);}
     |expr EQUAL_OP expr          {$$ = template("%s == %s", $1, $3);}
     |expr NOTEQUAL_OP expr       {$$ = template("%s != %s", $1, $3);}
-    |expr LESS_OP expr           {$$ = template("%s < %s", $1, $3);}
+    |expr '<' expr               {$$ = template("%s < %s", $1, $3);}
     |expr LESSEQUAL_OP expr      {$$ = template("%s <= %s", $1, $3);}
     |expr AND_OP expr            {$$ = template("%s && %s", $1, $3);}
     |expr OR_OP expr             {$$ = template("%s | %s", $1, $3);}
@@ -174,8 +176,8 @@ input: body {
     //|KEYWORD_IF '('expr')' instruction KEYWORD_ELSE complex_instr        {$$ = template("if ( %s ) %s %s %s", $3, $5, $6, $7);}
     //|KEYWORD_IF '('expr')' complex_instr KEYWORD_ELSE instruction        {$$ = template("if ( %s ) %s %s %s", $3, $5, $6, $7);}
     //|KEYWORD_IF '('expr')' complex_instr KEYWORD_ELSE complex_instr      {$$ = template("if ( %s ) %s %s %s", $3, $5, $6, $7);}
-    |KEYWORD_IF '('expr')' stmt KEYWORD_ELSE stmt                        {$$ = template("if ( %s ) %s %s %s", $3, $5, $6, $7);} 
-    |KEYWORD_IF '('expr')' stmt                                          {$$ = template("if ( %s ) %s", $3, $5);}
+    |KEYWORD_IF '('expr')' stmt %prec LOWER_THAN_ELSE                    {$$ = template("if ( %s ) %s", $3, $5);}
+    |KEYWORD_IF '('expr')' stmt KEYWORD_ELSE stmt                        {$$ = template("if ( %s ) %s else %s", $3, $5, $6, $7);} 
     |KEYWORD_FOR '('assign_instr ';' assign_instr ')' stmt               {$$ = template("for (%s ; %s ; %s) %s", $3, $5, $7);}
     |KEYWORD_FOR '('assign_instr ';' expr ';' assign_instr ')' stmt      {$$ = template("for (%s ; %s ; %s) %s", $3, $5, $7, $9);}
     |KEYWORD_WHILE '(' expr ')' stmt                                     {$$ = template("while ( %s ) %s", $3, $5);}
@@ -204,9 +206,9 @@ input: body {
     ;
 
  func_input:
-    %empty                       {$$ = template("");}
+    %empty                {$$ = template("");}
     |expr ',' func_input  {$$ = template("%s , %s", $1, $3);}
-    |expr                        {$$ = $1;}
+    |expr                 {$$ = $1;}
     ;
 
  stmt:
