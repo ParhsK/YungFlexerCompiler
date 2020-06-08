@@ -71,8 +71,8 @@ not          return NOT_OP;
 ","          return ',';
 "["          return '[';
 "]"          return ']';
-"{"          return LCB;
-"}"          return RCB;
+"{"          return '{';
+"}"          return '}';
 ":"          return ':';
 
 [ \r\t]+		        /* ignore whitespace */

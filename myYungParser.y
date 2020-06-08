@@ -41,14 +41,10 @@
 %token <str> EQUAL_OP
 %token <str> NOTEQUAL_OP
 %token <str> LESSEQUAL_OP
-%token <str> LCB
-%token <str> RCB
 %token <str> LOWER_THAN_ELSE
 %nonassoc LOWER_THAN_ELSE
 %nonassoc KEYWORD_ELSE
 
-%type <str> input
-%start input
 %type <str> expr
 %type <str> var
 %type <str> data_types
@@ -69,6 +65,9 @@
 %type <str> func_start
 %type <str> body
 %type <str> stmt
+/* %type <str> else_if  */
+
+%start input
 
 %left OR_OP
 %left AND_OP
@@ -80,15 +79,17 @@
 %right NOT_OP
 
 %%
-input: body {
-   if (yyerror_count == 0) {
-    // puts(c_prologue);
-    printf("Expression: %s\n", $1); 
-   }
+ input: body
+   {
+      if (yyerror_count == 0) {
+         puts(c_prologue);
+         printf("%s\n", $1); 
+      }
  };
 
  var:
-    KEYWORD_VAR identifiers  ':'  data_types ';'         {$$ = template("var %s : %s;", $2, $4);}
+     KEYWORD_VAR identifiers  ':'  data_types ';'  {$$ = template("%s %s;\n", $4, $2);}
+    |KEYWORD_VAR array ';'  {$$ = template("%s;\n", $2);}
     ;
 
  identifiers:
@@ -104,37 +105,37 @@ input: body {
     ;
 
  const:
-    KEYWORD_CONST assigned_identifiers ':' data_types ';' {$$ = template("const %s : %s;", $2, $4);}
+    KEYWORD_CONST assigned_identifiers ':' data_types ';' {$$ = template("const %s %s;\n", $4, $2);}
     ;
 
  data_types:
-     KEYWORD_BOOLEAN {$$ = template("boolean");}
+     KEYWORD_BOOLEAN {$$ = template("int");}
     |KEYWORD_NUMBER  {$$ = template("double");}
-    |KEYWORD_STRING  {$$ = template("string");}
+    |KEYWORD_STRING  {$$ = template("char*");}
     |KEYWORD_VOID    {$$ = template("void");}
     ;
 
  array:
-    KEYWORD_VAR IDENTIFIER'['INTEGER']' ':' data_types    {$$ = template("var %s[%s] : %s", $2, $4, $7);}
+    IDENTIFIER'['INTEGER']' ':' data_types  {$$ = template("%s %s[%s]", $6, $1, $3);}
     ;
 
  funcs:
-     KEYWORD_FUNCTION IDENTIFIER '('params')' ':' data_types LCB func_body RCB           {$$ = template("function %s (%s) : %s { %s };", $2, $4, $7, $9);}
-    |KEYWORD_FUNCTION IDENTIFIER '('params')' ':' '[' ']' data_types LCB func_body RCB   {$$ = template("function %s (%s) : [] %s { %s };", $2, $4, $9, $11);}
-    |KEYWORD_FUNCTION IDENTIFIER '('params')' LCB func_body RCB                          {$$ = template("function %s (%s) { %s };", $1, $2, $4, $7);}
+     KEYWORD_FUNCTION IDENTIFIER '('params')' ':' data_types '{' func_body '}' ';'          {$$ = template("%s %s (%s) {\n%s};\n", $7, $2, $4, $9);}
+    |KEYWORD_FUNCTION IDENTIFIER '('params')' ':' '[' ']' data_types '{' func_body '}' ';'  {$$ = template("%s* %s (%s) {\n%s};\n", $9, $2, $4, $11);}
+    |KEYWORD_FUNCTION IDENTIFIER '('params')' '{' func_body '}' ';'                         {$$ = template("void %s (%s) {\n%s};\n", $2, $4, $7);}
     ;
 
  params:
-     IDENTIFIER ':' data_types                   {$$ = template("%s : %s;", $1, $3);}
-    |IDENTIFIER '['']' ':' data_types            {$$ = template("%s[] : %s;", $1, $5);}
-    |IDENTIFIER ':' data_types ',' params        {$$ = template("%s : %s , %s;", $1, $3, $5);}
-    |IDENTIFIER '['']' ':' data_types ',' params {$$ = template("%s[] : %s , %s;", $1, $5, $7);}
+     IDENTIFIER ':' data_types                   {$$ = template("%s %s", $3, $1);}
+    |IDENTIFIER '['']' ':' data_types            {$$ = template("%s* %s", $5, $1);}
+    |IDENTIFIER ':' data_types ',' params        {$$ = template("%s %s, %s", $3, $1, $5);}
+    |IDENTIFIER '['']' ':' data_types ',' params {$$ = template("%s* %s, %s", $5, $1, $7);}
     ;
 
  func_body:
-     var func_body                {$$ = template("%s %s", $1, $2);}
-    |const func_body              {$$ = template("%s %s", $1, $2);}
-    |instruction func_body        {$$ = template("%s %s", $1, $2);}
+     var func_body                {$$ = template("%s%s", $1, $2);}
+    |const func_body              {$$ = template("%s%s", $1, $2);}
+    |instruction func_body        {$$ = template("%s%s", $1, $2);}
     |%empty                       {$$ = template("");}             
     ;
 
@@ -142,10 +143,10 @@ input: body {
      NOT_OP expr                 {$$ = template("NOT %s", $2);}
     |'+' expr %prec SIGN_OP      {$$ = template("+%s", $2);}
     |'-' expr %prec SIGN_OP      {$$ = template("-%s", $2);}
-    |expr POWER_OP expr          {$$ = template("%s ** %s", $1, $3);}
+    |expr POWER_OP expr          {$$ = template("pow(%s, %s)", $1, $3);}
     |expr '*' expr               {$$ = template("%s * %s", $1, $3);}
     |expr '/' expr               {$$ = template("%s / %s", $1, $3);}
-    |expr '%' expr               {$$ = template("%s % %s", $1, $3);}
+    |expr '%' expr               {$$ = template("fmod(%s, %s)", $1, $3);}
     |expr '+' expr               {$$ = template("%s + %s", $1, $3);}
     |expr '-' expr               {$$ = template("%s - %s", $1, $3);}
     |expr EQUAL_OP expr          {$$ = template("%s == %s", $1, $3);}
@@ -159,6 +160,7 @@ input: body {
     |literals                    {$$ = $1;}
     |IDENTIFIER                  {$$ = $1;}
     |array                       {$$ = $1;}
+    |IDENTIFIER'['INTEGER']'     {$$ = template("%s[%s]", $1, $3);}
     ;
 
  literals:
@@ -172,37 +174,39 @@ input: body {
 
  instruction:
      assign_instr                                                        {$$ = $1;}
-    //|KEYWORD_IF '('expr')' instruction KEYWORD_ELSE instruction          {$$ = template("if ( %s ) %s %s %s", $3, $5, $6, $7);}
-    //|KEYWORD_IF '('expr')' instruction KEYWORD_ELSE complex_instr        {$$ = template("if ( %s ) %s %s %s", $3, $5, $6, $7);}
-    //|KEYWORD_IF '('expr')' complex_instr KEYWORD_ELSE instruction        {$$ = template("if ( %s ) %s %s %s", $3, $5, $6, $7);}
-    //|KEYWORD_IF '('expr')' complex_instr KEYWORD_ELSE complex_instr      {$$ = template("if ( %s ) %s %s %s", $3, $5, $6, $7);}
-    |KEYWORD_IF '('expr')' stmt %prec LOWER_THAN_ELSE                    {$$ = template("if ( %s ) %s", $3, $5);}
-    |KEYWORD_IF '('expr')' stmt KEYWORD_ELSE stmt                        {$$ = template("if ( %s ) %s else %s", $3, $5, $6, $7);} 
-    |KEYWORD_FOR '('assign_instr ';' assign_instr ')' stmt               {$$ = template("for (%s ; %s ; %s) %s", $3, $5, $7);}
-    |KEYWORD_FOR '('assign_instr ';' expr ';' assign_instr ')' stmt      {$$ = template("for (%s ; %s ; %s) %s", $3, $5, $7, $9);}
-    |KEYWORD_WHILE '(' expr ')' stmt                                     {$$ = template("while ( %s ) %s", $3, $5);}
-    |KEYWORD_BREAK ';'                                                   {$$ = template("break;");}
-    |KEYWORD_CONTINUE ';'                                                {$$ = template("continue;");}
-    |KEYWORD_RETURN ';'                                                  {$$ = template("return;");}
-    |KEYWORD_RETURN expr ';'                                             {$$ = template("return %s;", $2);}
-    |func_call ';'                                                       {$$ = template("%s;", $1);}
+    |KEYWORD_IF '('expr')' stmt %prec LOWER_THAN_ELSE                    {$$ = template("if (%s) %s\n", $3, $5);}
+    |KEYWORD_IF '('expr')' stmt KEYWORD_ELSE  stmt                       {$$ = template("if (%s) %s else %s\n", $3, $5, $7);}
+    /* |KEYWORD_IF '('expr')' stmt else_if KEYWORD_ELSE  stmt               {$$ = template("if (%s) %s %s else %s\n", $3, $5, $6, $8);} */
+    |KEYWORD_FOR '('assign_instr ';' assign_instr ')' stmt ';'           {$$ = template("for (%s ; %s ; %s) %s\n", $3, $5, $7);}
+    |KEYWORD_FOR '('assign_instr ';' expr ';' assign_instr ')' stmt ';'  {$$ = template("for (%s ; %s ; %s) %s\n", $3, $5, $7, $9);}
+    |KEYWORD_WHILE '(' expr ')' stmt ';'                                 {$$ = template("while ( %s ) %s\n", $3, $5);}
+    |KEYWORD_BREAK ';'                                                   {$$ = template("break;\n");}
+    |KEYWORD_CONTINUE ';'                                                {$$ = template("continue;\n");}
+    |KEYWORD_RETURN ';'                                                  {$$ = template("return;\n");}
+    |KEYWORD_RETURN expr ';'                                             {$$ = template("return %s;\n", $2);}
+    |func_call ';'                                                       {$$ = template("%s;\n", $1);}
     ;
  
+ /* else_if:
+    KEYWORD_ELSE KEYWORD_IF '('expr')' stmt else_if {$$ = template("%s if else", $1);}
+   |KEYWORD_ELSE KEYWORD_IF '('expr')' stmt  {$$ = template("%s if else", $1);}
+   ; */
+
  instr_list:
      instruction               {$$ = $1;}
     |instruction instr_list    {$$ = template("%s %s", $1, $2);}
     ;
 
  complex_instr:
-    LCB instr_list RCB {$$ = template("{ %s }", $2);}
+    '{' instr_list '}'  {$$ = template("{\n%s\n}", $2);}
     ;
     
  assign_instr:
-    IDENTIFIER '=' expr ';'  {$$ = template("%s = %s;", $1, $3);}
+    IDENTIFIER '=' expr ';'  {$$ = template("%s = %s;\n", $1, $3);}
     ;
 
  func_call:
-    IDENTIFIER'('func_input ')' {$$ = template("%s ( %s )", $1, $3);}
+    IDENTIFIER'('func_input ')' {$$ = template("%s(%s)", $1, $3);}
     ;
 
  func_input:
@@ -212,27 +216,27 @@ input: body {
     ;
 
  stmt:
-    instruction   {$$ = $1;}
+    instruction   {$$ = template("{\n%s\n}", $1);}
    |complex_instr {$$ = $1;}
    ;
 
  func_start:
-    KEYWORD_FUNCTION KEYWORD_START '(' ')' ':' KEYWORD_VOID complex_instr {$$ = template("%s %s() : %s %s", $1, $2, $6, $7);}
+    KEYWORD_FUNCTION KEYWORD_START '(' ')' ':' KEYWORD_VOID '{' func_body '}' {$$ = template("void main() {\n%s}\n", $8);}
     ;
 
  body:
-   %empty             {$$ = template("");}
-   |const input       {$$ = template("%s %s", $1, $2);}
-   |var input         {$$ = template("%s %s", $1, $2);}
-   |funcs input       {$$ = template("%s %s", $1, $2);}
-   |func_start input  {$$ = template("%s %s", $1, $2);}
-   |';' input         {$$ = template("; %s", $2);}
+   %empty             {$$ = template("\n");}
+   |body const        {$$ = template("%s%s", $1, $2);}
+   |body var          {$$ = template("%s%s", $1, $2);}
+   |body funcs        {$$ = template("%s%s", $1, $2);}
+   |body func_start   {$$ = template("%s%s", $1, $2);}
    ;
 
 %%
 int main(){
     if (yyparse() == 0)
         printf("Grammatically Accepted!\n");
-    else
+    else{
         printf("Grammatically Rejected!\n");
+    }
 }
