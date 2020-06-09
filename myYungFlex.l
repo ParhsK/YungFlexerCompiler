@@ -42,13 +42,13 @@ true         return BOOL_TRUE;
 false        return BOOL_FALSE;
 continue     return KEYWORD_CONTINUE;
 null         return KEYWORD_NULL;
-else         return KEYWORD_ELSE;  
+else         return KEYWORD_ELSE;
 
 and          return AND_OP;
 or           return OR_OP;
 not          return NOT_OP;
 
-{ID}        { yylval.str = strdup(yytext);   return IDENTIFIER; }     
+{ID}        { yylval.str = strdup(yytext);   return IDENTIFIER; }
 {INTEGER}   { yylval.str = strdup(yytext);   return INTEGER; }
 {NUMBER}    { yylval.str = strdup(yytext);   return NUMBER; }
 {STRING}    { yylval.str = strdup(yytext);   return STRING; }

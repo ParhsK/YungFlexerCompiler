@@ -1,0 +1,1 @@
+./mycompiler < prime.ms > prime.c && ./mycompiler < correct1.ms > correct1.c && ./mycompiler < correct2.ms > correct2.c

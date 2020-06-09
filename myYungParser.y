@@ -54,7 +54,6 @@
 %type <str> complex_instr
 %type <str> func_input
 %type <str> funcs
-%type <str> array
 %type <str> identifiers
 %type <str> literals
 %type <str> assigned_identifiers
@@ -65,7 +64,6 @@
 %type <str> func_start
 %type <str> body
 %type <str> stmt
-/* %type <str> else_if  */
 
 %start input
 
@@ -82,6 +80,8 @@
  input: body
    {
       if (yyerror_count == 0) {
+         //h math xrhsimopoihtai gia thn pow() kai thn fmod() kai xreiazetai thn entolh gcc -std=c99 -Wall -lm
+         puts("#include <math.h>\n");
          puts(c_prologue);
          printf("%s\n", $1); 
       }
@@ -89,7 +89,7 @@
 
  var:
      KEYWORD_VAR identifiers  ':'  data_types ';'  {$$ = template("%s %s;\n", $4, $2);}
-    |KEYWORD_VAR array ';'  {$$ = template("%s;\n", $2);}
+    |KEYWORD_VAR IDENTIFIER'['INTEGER']' ':' data_types ';'  {$$ = template("%s %s[%s];\n", $7, $2, $4);}
     ;
 
  identifiers:
@@ -113,10 +113,6 @@
     |KEYWORD_NUMBER  {$$ = template("double");}
     |KEYWORD_STRING  {$$ = template("char*");}
     |KEYWORD_VOID    {$$ = template("void");}
-    ;
-
- array:
-    IDENTIFIER'['INTEGER']' ':' data_types  {$$ = template("%s %s[%s]", $6, $1, $3);}
     ;
 
  funcs:
@@ -159,7 +155,6 @@
     |func_call                   {$$ = $1;}
     |literals                    {$$ = $1;}
     |IDENTIFIER                  {$$ = $1;}
-    |array                       {$$ = $1;}
     |IDENTIFIER'['INTEGER']'     {$$ = template("%s[%s]", $1, $3);}
     ;
 
@@ -167,18 +162,20 @@
      STRING       {$$ = $1;}
     |INTEGER      {$$ = $1;}
     |NUMBER       {$$ = $1;}
-    |BOOL_FALSE   {$$ = $1;}
-    |BOOL_TRUE    {$$ = $1;}
-    |KEYWORD_NULL {$$ = $1;}
+    |BOOL_FALSE   {$$ = template("0");}
+    |BOOL_TRUE    {$$ = template("1");}
+    |KEYWORD_NULL {$$ = template("null");}
     ;
 
+//Den evala erwthmatiko sthn if kai sthn for giati akolouthhsa tous kanones miniScript opws perigrafontai sto pdf kai pou antistoixoun sthn C99.
+//Ta paradeigmata px prime.ms exoun erwthmatiko opote den pernane kai einai logiko opws anaferw apo panw kai sto paradoteo prime.ms den exei erwthmatiko.
+//Sthn while to exw afhsei gia na deiksw oti den exei megalh diafora alla sthn C99 den exei.
  instruction:
-     assign_instr                                                        {$$ = $1;}
+     assign_instr ';'                                                    {$$ = template("%s;\n", $1);}
     |KEYWORD_IF '('expr')' stmt %prec LOWER_THAN_ELSE                    {$$ = template("if (%s) %s\n", $3, $5);}
     |KEYWORD_IF '('expr')' stmt KEYWORD_ELSE  stmt                       {$$ = template("if (%s) %s else %s\n", $3, $5, $7);}
-    /* |KEYWORD_IF '('expr')' stmt else_if KEYWORD_ELSE  stmt               {$$ = template("if (%s) %s %s else %s\n", $3, $5, $6, $8);} */
-    |KEYWORD_FOR '('assign_instr ';' assign_instr ')' stmt ';'           {$$ = template("for (%s ; %s ; %s) %s\n", $3, $5, $7);}
-    |KEYWORD_FOR '('assign_instr ';' expr ';' assign_instr ')' stmt ';'  {$$ = template("for (%s ; %s ; %s) %s\n", $3, $5, $7, $9);}
+    |KEYWORD_FOR '('assign_instr ';' assign_instr ')' stmt               {$$ = template("for (%s ; %s ; %s) %s\n", $3, $5, $7);}
+    |KEYWORD_FOR '('assign_instr ';' expr ';' assign_instr ')' stmt      {$$ = template("for (%s ; %s ; %s) %s\n", $3, $5, $7, $9);}
     |KEYWORD_WHILE '(' expr ')' stmt ';'                                 {$$ = template("while ( %s ) %s\n", $3, $5);}
     |KEYWORD_BREAK ';'                                                   {$$ = template("break;\n");}
     |KEYWORD_CONTINUE ';'                                                {$$ = template("continue;\n");}
@@ -186,11 +183,6 @@
     |KEYWORD_RETURN expr ';'                                             {$$ = template("return %s;\n", $2);}
     |func_call ';'                                                       {$$ = template("%s;\n", $1);}
     ;
- 
- /* else_if:
-    KEYWORD_ELSE KEYWORD_IF '('expr')' stmt else_if {$$ = template("%s if else", $1);}
-   |KEYWORD_ELSE KEYWORD_IF '('expr')' stmt  {$$ = template("%s if else", $1);}
-   ; */
 
  instr_list:
      instruction               {$$ = $1;}
@@ -202,7 +194,7 @@
     ;
     
  assign_instr:
-    IDENTIFIER '=' expr ';'  {$$ = template("%s = %s;\n", $1, $3);}
+    IDENTIFIER '=' expr  {$$ = template("%s = %s", $1, $3);}
     ;
 
  func_call:
@@ -221,7 +213,8 @@
    ;
 
  func_start:
-    KEYWORD_FUNCTION KEYWORD_START '(' ')' ':' KEYWORD_VOID '{' func_body '}' {$$ = template("void main() {\n%s}\n", $8);}
+   //C99  warning: return type of ‘main’ is not ‘int’ [-Wmain]
+    KEYWORD_FUNCTION KEYWORD_START '(' ')' ':' KEYWORD_VOID '{' func_body '}' {$$ = template("int main() {\n%s}\n", $8);}
     ;
 
  body:
@@ -235,8 +228,8 @@
 %%
 int main(){
     if (yyparse() == 0)
-        printf("Grammatically Accepted!\n");
+        printf("//Grammatically Accepted!\n");
     else{
-        printf("Grammatically Rejected!\n");
+        printf("//Grammatically Rejected!\n");
     }
 }
